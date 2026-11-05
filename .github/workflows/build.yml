@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -56,3 +59,39 @@ jobs:
           name: dari-screen-translator-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Publish APK as a public release asset
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.0
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          status=$(curl --silent --show-error --output release.json --write-out '%{http_code}' \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            "${api}/releases/tags/${RELEASE_TAG}")
+          if [ "${status}" = "200" ]; then
+            echo "Release ${RELEASE_TAG} already exists; leaving its assets unchanged."
+            exit 0
+          fi
+          if [ "${status}" != "404" ]; then
+            echo "Failed to check release ${RELEASE_TAG} (HTTP ${status})."
+            cat release.json
+            exit 1
+          fi
+
+          release=$(curl --fail --silent --show-error --request POST "${api}/releases" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "Content-Type: application/json" \
+            --data "{\"tag_name\":\"${RELEASE_TAG}\",\"target_commitish\":\"${GITHUB_SHA}\",\"name\":\"Transloy v1.0.0\",\"body\":\"Debug APK for Transloy v1.0.0.\"}")
+          release_id=$(printf '%s' "${release}" | jq --exit-status --raw-output '.id')
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          curl --fail --silent --show-error --request POST \
+            "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?name=transloy-v1.0.0-debug.apk" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "Content-Type: application/vnd.android.package-archive" \
+            --data-binary "@${apk}"
