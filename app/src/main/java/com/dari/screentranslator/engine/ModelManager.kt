@@ -44,12 +44,10 @@ object ModelManager {
     fun displayName(code: String): String =
         LANGUAGES.firstOrNull { it.code == code }?.englishName ?: code
 
-    fun isDownloaded(code: String): Boolean = try {
+suspend fun isDownloaded(code: String): Boolean =
         RemoteModelManager.getInstance()
             .isModelDownloaded(TranslateRemoteModel.Builder(code).build())
-    } catch (t: Throwable) {
-        false
-    }
+            .await()
 
     suspend fun downloadModel(code: String) {
         RemoteModelManager.getInstance()

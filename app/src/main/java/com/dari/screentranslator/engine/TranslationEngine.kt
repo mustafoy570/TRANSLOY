@@ -65,7 +65,7 @@ object TranslationEngine {
             )
             try {
                 for (text in uniqueTexts) {
-                    tagByText[text] = identifier.processText(text).await()
+                    tagByText[text] = identifier.identifyLanguage(text).await()
                 }
             } finally {
                 identifier.close()
