@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مترجم صفحه دری</string>
+
+    <string name="toggle_section_title">ترجمه صفحه</string>
+    <string name="toggle_on">ترجمه روشن است</string>
+    <string name="toggle_off">ترجمه خاموش است</string>
+    <string name="toggle_hint">روشن کنید تا دکمه شناور ترجمه روی همه برنامه‌ها نمایش داده شود.</string>
+    <string name="capture_status_ready">ضبط صفحه آماده است</string>
+    <string name="capture_status_off">ضبط صفحه غیرفعال است (هنگام اولین استفاده پرسیده می‌شود)</string>
+    <string name="permissions_title">مجوزها</string>
+    <string name="perm_overlay">نمایش روی برنامه‌ها</string>
+    <string name="perm_notifications">اعلان‌ها</string>
+    <string name="perm_accessibility">دسترس‌پذیری</string>
+    <string name="status_granted">داده شده</string>
+    <string name="status_missing">داده نشده</string>
+
+    <string name="settings_section">تنظیمات</string>
+    <string name="settings_ocr_script">خط تشخیص متن</string>
+    <string name="script_auto">خودکار</string>
+    <string name="script_latin">لاتین</string>
+    <string name="script_devanagari">دوانگری</string>
+    <string name="script_chinese">چینی</string>
+    <string name="script_japanese">ژاپنی</string>
+    <string name="script_korean">کره‌ای</string>
+    <string name="settings_auto_hide">پنهان‌کردن ترجمه‌ها پس از</string>
+    <string name="auto_hide_never">هرگز</string>
+    <string name="auto_hide_10">۱۰ ثانیه</string>
+    <string name="auto_hide_30">۳۰ ثانیه</string>
+    <string name="auto_hide_60">۶۰ ثانیه</string>
+    <string name="open_models">مدل‌های زبان</string>
+    <string name="open_guide">راهنمای راه‌اندازی</string>
+
+    <string name="models_title">مدل‌های زبان</string>
+    <string name="models_subtitle">یک بار با اینترنت دانلود کنید، سپس کاملاً آفلاین ترجمه می‌شود. حجم هر مدل حدود ۳۰ مگابایت است.</string>
+    <string name="model_download_all">دانلود همه</string>
+    <string name="model_download">دانلود</string>
+    <string name="model_delete">حذف</string>
+    <string name="model_downloading">در حال دانلود…</string>
+    <string name="model_ready">آماده</string>
+    <string name="model_not_ready">دانلود نشده</string>
+    <string name="model_error">ناموفق. اتصال اینترنت را بررسی کنید</string>
+    <string name="model_target_badge">زبان مقصد (لازم است)</string>
+    <string name="model_count_summary">%1$d از %2$d دانلود شده</string>
+
+    <string name="guide_title">راهنمای راه‌اندازی</string>
+    <string name="guide_intro">این مراحل را یک بار انجام دهید. روی هر کارت بزنید تا صفحه تنظیمات آن باز شود.</string>
+    <string name="guide_step_overlay_title">اجازه نمایش روی دیگر برنامه‌ها</string>
+    <string name="guide_step_overlay_desc">برای نمایش دکمه شناور و جعبه‌های ترجمه لازم است.</string>
+    <string name="guide_step_notifications_title">اجازه اعلان‌ها</string>
+    <string name="guide_step_notifications_desc">در اندروید ۱۳ و جدیدتر برای اجرای سرویس‌های ترجمه در پس‌زمینه لازم است.</string>
+    <string name="guide_step_accessibility_title">فعال‌سازی سرویس دسترس‌پذیری</string>
+    <string name="guide_step_accessibility_desc">متن صفحه را فوری می‌خواند. در تنظیمات دسترس‌پذیری «مترجم صفحه دری» را پیدا و روشن کنید.</string>
+    <string name="guide_step_capture_title">اجازه ضبط صفحه</string>
+    <string name="guide_step_capture_desc">بار اول که ترجمه تصویر یا بازی لازم شود خودکار پرسیده می‌شود. «کل صفحه» را انتخاب کنید.</string>
+    <string name="guide_done">تمام شد</string>
+
+    <string name="how_to_title">روش استفاده</string>
+    <string name="how_to_1">کلید بزرگ را در صفحه اصلی روشن کنید.</string>
+    <string name="how_to_2">دکمه کوچک شناور روی همه برنامه‌ها ظاهر می‌شود؛ آن را هر جا بخواهید بکشید.</string>
+    <string name="how_to_3">یک بار روی آن بزنید تا صفحه فعلی به فارسی/دری ترجمه شود.</string>
+    <string name="how_to_4">دوباره بزنید تا ترجمه‌ها پنهان شوند.</string>
+    <string name="how_to_5">برای ترجمه اجباری تصویر، دکمه را نگه دارید.</string>
+    <string name="how_to_6">مدل‌های زبان را از قبل وقتی اینترنت دارید دانلود کنید.</string>
+
+    <string name="back">بازگشت</string>
+
+    <string name="channel_overlay">لایه ترجمه</string>
+    <string name="channel_capture">ضبط صفحه</string>
+    <string name="notif_overlay_title">ترجمه روشن است</string>
+    <string name="notif_overlay_text">برای ترجمه صفحه روی دکمه شناور بزنید.</string>
+    <string name="notif_capture_title">ضبط صفحه فعال است</string>
+    <string name="notif_capture_text">فقط هنگام ترجمه تصاویر و بازی‌ها استفاده می‌شود.</string>
+    <string name="notif_action_turn_off">خاموش کردن</string>
+    <string name="notif_action_stop">توقف</string>
+    <string name="btn_translate_desc">ترجمه صفحه</string>
+
+    <string name="accessibility_service_label">مترجم صفحه دری</string>
+    <string name="accessibility_service_summary">متن روی صفحه را می‌خواند تا به فارسی/دری ترجمه شود</string>
+    <string name="accessibility_service_description">این سرویس فقط وقتی شما روی دکمه شناور ترجمه بزنید، متن صفحه فعلی را می‌خواند و به مترجم داخل خود دستگاه می‌دهد. هیچ اطلاعاتی از گوشی شما خارج نمی‌شود.</string>
+
+    <string name="toast_no_text">متن قابل خواندنی روی این صفحه پیدا نشد</string>
+    <string name="toast_nothing_to_translate">چیزی برای ترجمه نیست (فارسی است یا پشتیبانی نمی‌شود)</string>
+    <string name="toast_capture_failed">ضبط صفحه ممکن نشد. دوباره تلاش کنید</string>
+    <string name="toast_consent_needed">برای ترجمه تصاویر، اجازه ضبط صفحه بدهید</string>
+    <string name="toast_consent_denied">اجازه ضبط صفحه داده نشد. ترجمه تصویر در دسترس نیست</string>
+    <string name="toast_model_downloading">مدل %1$s در حال دانلود است… (فقط بار اول)</string>
+    <string name="toast_model_missing">مدل %1$s موجود نیست. برنامه را باز کنید و آن را دانلود کنید</string>
+    <string name="toast_translation_error">خطای ترجمه: %1$s</string>
+    <string name="toast_overlay_permission">اول اجازه «نمایش روی دیگر برنامه‌ها» را بدهید</string>
+</resources>

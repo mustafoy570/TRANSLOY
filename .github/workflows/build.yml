@@ -1,0 +1,56 @@
+name: Build debug APK
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle distribution
+        uses: actions/cache@v4
+        with:
+          path: /opt/gradle-8.9
+          key: gradle-8.9-distribution
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-deps-${{ hashFiles('gradle/libs.versions.toml', 'app/build.gradle.kts', 'settings.gradle.kts') }}
+          restore-keys: gradle-deps-
+
+      - name: Build debug APK
+        run: |
+          if [ ! -x /opt/gradle-8.9/bin/gradle ]; then
+            curl -sL -o /tmp/gradle-8.9-bin.zip https://services.gradle.org/distributions/gradle-8.9-bin.zip
+            unzip -q /tmp/gradle-8.9-bin.zip -d /opt
+          fi
+          /opt/gradle-8.9/bin/gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Verify APK exists
+        run: |
+          ls -la app/build/outputs/apk/debug/
+          test -f app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dari-screen-translator-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
