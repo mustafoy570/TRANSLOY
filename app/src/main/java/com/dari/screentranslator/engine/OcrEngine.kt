@@ -71,7 +71,7 @@ object OcrEngine {
                 } catch (t: Throwable) {
                     null
                 }
-                val lines = result?.blocks?.flatMap { block -> block.lines } ?: emptyList()
+                val lines = result?.textBlocks?.flatMap { block -> block.lines } ?: emptyList()
                 if (lines.size > bestLines.size) bestLines = lines
                 if (script != OcrScript.AUTO) break
                 if (bestLines.sumOf { it.text.length } >= 8) break
