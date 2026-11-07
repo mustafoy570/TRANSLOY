@@ -9,11 +9,11 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
-import com.google.mlkit.vision.text.TextRecognizerOptions
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -71,7 +71,7 @@ object OcrEngine {
                 } catch (t: Throwable) {
                     null
                 }
-                val lines = result?.blocks?.flatMap { block -> block.lines } ?: emptyList()
+                val lines = result?.textBlocks?.flatMap { block -> block.lines } ?: emptyList()
                 if (lines.size > bestLines.size) bestLines = lines
                 if (script != OcrScript.AUTO) break
                 if (recognizer === latinRecognizer) {

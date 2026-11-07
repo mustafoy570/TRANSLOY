@@ -72,7 +72,7 @@ class TranslationOverlayManager(
                 background = ContextCompat.getDrawable(context, R.drawable.overlay_box_bg)
                 gravity = Gravity.CENTER_VERTICAL
                 layoutDirection = View.LAYOUT_DIRECTION_RTL
-                textDirection = View.TEXT_DIRECTION_FIRSTSTRONG
+                textDirection = View.TEXT_DIRECTION_FIRST_STRONG
                 textAlignment = View.TEXT_ALIGNMENT_VIEW_START
                 maxLines = 3
                 ellipsize = TextUtils.TruncateAt.END
