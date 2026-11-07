@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PRIVACY: all backups are disabled. The app holds nothing worth backing
+     up (only UI preferences), and allowing adb/cloud extraction of the app's
+     private directory would contradict the "nothing leaves this phone"
+     promise. Cloud backup is additionally disabled by
+     android:allowBackup="false" and data_extraction_rules.xml on API 31+. -->
+<full-backup-content />

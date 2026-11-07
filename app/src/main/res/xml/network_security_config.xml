@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PRIVACY / TRANSPORT SECURITY: the only network traffic this app can ever
+     generate is HTTPS downloads of ML Kit language packs. Cleartext HTTP is
+     rejected process-wide, and no user-installed CA is trusted, so an
+     on-path attacker cannot silently intercept or tamper with the download. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
