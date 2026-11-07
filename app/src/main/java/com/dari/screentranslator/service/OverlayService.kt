@@ -492,7 +492,7 @@ class OverlayService : Service() {
             TranslationEngine.Event.AllTextAlreadyPersian ->
                 toast(R.string.toast_already_persian)
             TranslationEngine.Event.PashtoNotSupported ->
-                toast(R.string.toast_pashto_unsupported, Toast.LENGTH_LONG)
+                toast(getString(R.string.toast_pashto_unsupported), Toast.LENGTH_LONG)
             is TranslationEngine.Event.ModelsMissingOffline ->
                 toast(
                     getString(

@@ -208,8 +208,8 @@ object TranslationEngine {
             if (translated.isBlank()) continue
             boxes.add(TranslatedBox(item.id, item.text, translated, item.bounds, item.source))
         }
-        if (boxes.isEmpty() && lastFailure != null) {
-            onEvent(Event.Failed(lastFailure))
+        if (boxes.isEmpty()) {
+            lastFailure?.let { onEvent(Event.Failed(it)) }
         }
         boxes
     }
