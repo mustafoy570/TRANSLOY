@@ -23,8 +23,7 @@ import java.util.zip.ZipOutputStream
  *
  * This manager therefore builds a SHARE PACK:
  *
- *   1. the app's own APK (copied out of /data/app, signed with the fixed
- *      key, so it installs on top of / alongside any older version), and
+ *   1. the app's own APK (copied out of /data/app), and
  *   2. a ZIP of every ML Kit translation model file found in the app's
  *      private storage, with the folder structure preserved.
  *
@@ -242,8 +241,8 @@ object ModelShareManager {
         }.apply {
             type = "*/*"
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            putExtra(Intent.EXTRA_TITLE, "Dari Screen Translator — app + offline models")
-            putExtra(Intent.EXTRA_SUBJECT, "Dari Screen Translator — app + offline models")
+            putExtra(Intent.EXTRA_TITLE, "TRANSLOY — app + offline models")
+            putExtra(Intent.EXTRA_SUBJECT, "TRANSLOY — app + offline models")
         }
 
         val zapya = ZAPYA_PACKAGES.firstOrNull { pkg ->
@@ -252,7 +251,7 @@ object ModelShareManager {
         return if (zapya != null) {
             send.setPackage(zapya)
         } else {
-            Intent.createChooser(send, "Dari Screen Translator")
+            Intent.createChooser(send, "TRANSLOY")
         }
     }
 
@@ -268,10 +267,8 @@ object ModelShareManager {
         return File(external, "share")
     }
 
-    private companion object {
-        const val APK_FILE_NAME = "Dari-Screen-Translator-v1.5.0.apk"
-        const val MODELS_ZIP_NAME = "Dari-Translator-offline-models.zip"
-        const val ROOT_FILES = "files"
-        const val ROOT_NO_BACKUP = "no_backup"
-    }
+    private const val APK_FILE_NAME = "TRANSLOY-v3.0.0.apk"
+    private const val MODELS_ZIP_NAME = "Dari-Translator-offline-models.zip"
+    private const val ROOT_FILES = "files"
+    private const val ROOT_NO_BACKUP = "no_backup"
 }

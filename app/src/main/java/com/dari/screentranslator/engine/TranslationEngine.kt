@@ -162,7 +162,7 @@ object TranslationEngine {
             )
             try {
                 for (text in uniqueTexts) {
-                    tagByText[text] = identifier.processText(text).await()
+                    tagByText[text] = identifier.identifyLanguage(text).await()
                 }
             } finally {
                 identifier.close()
@@ -285,8 +285,8 @@ object TranslationEngine {
                 )
             )
         }
-        if (boxes.isEmpty() && lastFailure != null) {
-            onEvent(Event.Failed(lastFailure))
+        if (boxes.isEmpty()) {
+            lastFailure?.let { onEvent(Event.Failed(it)) }
         }
         boxes
     }
@@ -396,11 +396,11 @@ object TranslationEngine {
             // "ها" / "های" detached from their word by the translator.
             .replace(
                 Regex("([\\u0600-\\u06FF])\\s+ها(?=[\\s.!،؟:]|$)"),
-                "$1$ZWNJها"
+                "$1${ZWNJ}ها"
             )
             .replace(
                 Regex("([\\u0600-\\u06FF])\\s+های(?=[\\s.!،؟:]|$)"),
-                "$1$ZWNJهای"
+                "$1${ZWNJ}های"
             )
             .trim()
 

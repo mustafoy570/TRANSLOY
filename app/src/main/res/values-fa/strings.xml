@@ -79,7 +79,7 @@
     <string name="guide_step_notifications_title">اجازه اعلان‌ها</string>
     <string name="guide_step_notifications_desc">در اندروید ۱۳ و جدیدتر برای اجرای سرویس‌های ترجمه در پس‌زمینه لازم است.</string>
     <string name="guide_step_accessibility_title">فعال‌سازی سرویس دسترس‌پذیری</string>
-    <string name="guide_step_accessibility_desc">متن صفحه را فوری می‌خواند. در تنظیمات دسترس‌پذیری «مترجم صفحه دری» را پیدا و روشن کنید.</string>
+    <string name="guide_step_accessibility_desc">متن صفحه را فوری می‌خواند. در تنظیمات دسترس‌پذیری «TRANSLOY» را پیدا و روشن کنید.</string>
     <string name="guide_step_capture_title">اجازه ضبط صفحه</string>
     <string name="guide_step_capture_desc">بار اول که ترجمه تصویر یا بازی لازم شود خودکار پرسیده می‌شود. «کل صفحه» را انتخاب کنید.</string>
     <string name="guide_done">تمام شد</string>

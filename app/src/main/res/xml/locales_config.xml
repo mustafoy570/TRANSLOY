@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Per-app language list for Android 13+: lets the system offer English and
-     دری in Settings → Apps → Dari Screen Translator → Languages, in sync with
+     دری in Settings → Apps → TRANSLOY → Languages, in sync with
      the in-app language switch. -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
     <locale android:name="en" />

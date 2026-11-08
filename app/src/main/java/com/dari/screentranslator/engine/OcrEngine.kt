@@ -9,11 +9,11 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
-import com.google.mlkit.vision.text.TextRecognizerOptions
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -81,7 +81,7 @@ object OcrEngine {
                 } catch (t: Throwable) {
                     null
                 }
-                val lines = result?.blocks?.flatMap { block -> block.lines } ?: emptyList()
+                val lines = result?.textBlocks?.flatMap { block -> block.lines } ?: emptyList()
                 if (lines.size > bestLines.size) bestLines = lines
                 if (script != OcrScript.AUTO) break
                 if (recognizer === latinRecognizer) {
@@ -223,7 +223,7 @@ object OcrEngine {
         // 2. Vertical gap: small (possibly slightly negative) keeps the
         //    paragraph together; a large gap starts a new block.
         val gap = line.box.top - prev.bottom
-        val refHeight = maxOf(paragraph.lastLineHeight, line.box.height, 1)
+        val refHeight = maxOf(paragraph.lastLineHeight, line.box.height(), 1)
         if (gap < -(refHeight * 0.2f)) return false // heavy overlap: other column
         if (gap > refHeight * 0.55f) return false   // clearly a new block
 
@@ -242,11 +242,9 @@ object OcrEngine {
         return leftEdgeDiff <= refHeight * 1.5f && overlap >= narrower * 0.5f
     }
 
-    private companion object {
-        /** Status-bar / navigation-bar clip zone. */
-        const val EDGE_CUTOFF_RATIO = 0.035f
+    /** Status-bar / navigation-bar clip zone. */
+    private const val EDGE_CUTOFF_RATIO = 0.035f
 
-        /** Below this confidence an OCR line is noise, not text. */
-        const val MIN_CONFIDENCE = 0.58f
-    }
+    /** Below this confidence an OCR line is noise, not text. */
+    private const val MIN_CONFIDENCE = 0.58f
 }

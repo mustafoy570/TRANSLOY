@@ -1,4 +1,4 @@
-# Dari Screen Translator
+# TRANSLOY
 
 Third release: **TRANSLOY v3.0.0**.
 

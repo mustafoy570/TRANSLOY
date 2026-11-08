@@ -189,7 +189,7 @@ class TranslationPanelManager(
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     maxLines = 2
                     ellipsize = TextUtils.TruncateAt.END
-                    textDirection = View.TEXT_DIRECTION_FIRSTSTRONG
+                    textDirection = View.TEXT_DIRECTION_FIRST_STRONG
                     textAlignment = View.TEXT_ALIGNMENT_VIEW_START
                 }
             )
@@ -204,7 +204,7 @@ class TranslationPanelManager(
                     // direction + start alignment, and no truncation at all —
                     // long translations wrap instead of being ruined.
                     layoutDirection = View.LAYOUT_DIRECTION_RTL
-                    textDirection = View.TEXT_DIRECTION_FIRSTSTRONG
+                    textDirection = View.TEXT_DIRECTION_FIRST_STRONG
                     textAlignment = View.TEXT_ALIGNMENT_VIEW_START
                     gravity = Gravity.START
                     setLineSpacing(3f, 1f)

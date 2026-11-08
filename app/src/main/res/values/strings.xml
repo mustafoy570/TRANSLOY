@@ -83,7 +83,7 @@
     <string name="guide_step_notifications_title">Allow notifications</string>
     <string name="guide_step_notifications_desc">Required on Android 13 and newer so the translation services can run in the background.</string>
     <string name="guide_step_accessibility_title">Enable the accessibility service</string>
-    <string name="guide_step_accessibility_desc">Reads on-screen text instantly. Find “Dari Screen Translator” in the Accessibility settings and turn it on.</string>
+    <string name="guide_step_accessibility_desc">Reads on-screen text instantly. Find “TRANSLOY” in the Accessibility settings and turn it on.</string>
     <string name="guide_step_capture_title">Screen capture consent</string>
     <string name="guide_step_capture_desc">Asked automatically the first time an image or game needs translation. Choose “Entire screen”.</string>
     <string name="guide_done">Done</string>
