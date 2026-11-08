@@ -19,6 +19,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
@@ -33,7 +34,9 @@ import com.dari.screentranslator.engine.TranslationEngine
 import com.dari.screentranslator.model.ScreenTextItem
 import com.dari.screentranslator.model.ScrollBehavior
 import com.dari.screentranslator.model.TranslateScope
-import com.dari.screentranslator.overlay.TranslationOverlayManager
+import com.dari.screentranslator.overlay.QuickMenuManager
+import com.dari.screentranslator.overlay.ScanAnimationOverlay
+import com.dari.screentranslator.overlay.TranslationPanelManager
 import com.dari.screentranslator.util.SystemUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,10 +47,29 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 /**
- * Foreground service that shows the draggable semi-transparent floating
- * button over every app. A tap reads the current screen (accessibility
- * first, MediaProjection + OCR as fallback) and translates it to Persian.
- * Another tap hides the translation. A long-press forces OCR.
+ * Foreground service that shows the single draggable floating button over
+ * every app (v1.5 one-button UX):
+ *
+ *  - TAP           → opens the circular quick menu (Translate / OCR /
+ *                    Auto-on-scroll / Close / Turn off). The menu closes
+ *                    itself after a choice or on a tap on the dimmed
+ *                    background — the bubble needs no second "close"
+ *                    button any more.
+ *  - LONG-PRESS    → smart: translations or the menu are open → close them;
+ *                    nothing open → translate the text NEAR the button
+ *                    (point-and-translate, no dragging needed).
+ *  - DRAG          → only moves the button. The old "translate on drop"
+ *                    behaviour is gone (user rating: 20/100).
+ *
+ * v1.5.0 polish:
+ *  - Every translation starts with the teal LASER SCAN sweep (the effect
+ *    users loved), with a soft haptic tick — the wait feels instant.
+ *  - After 3 idle seconds the button docks itself against the nearest
+ *    screen edge, tucks halfway off-screen and fades to 40% — it stops
+ *    disturbing the user. Any touch wakes it up instantly.
+ *
+ * Results are shown in the bottom TranslationPanel (original + Dari,
+ * RTL-correct) instead of boxes that covered the screen.
  */
 class OverlayService : Service() {
 
@@ -55,7 +77,9 @@ class OverlayService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private lateinit var windowManager: WindowManager
-    private var overlayManager: TranslationOverlayManager? = null
+    private var panelManager: TranslationPanelManager? = null
+    private var menuManager: QuickMenuManager? = null
+    private var scanOverlay: ScanAnimationOverlay? = null
     private var bubble: ImageView? = null
 
     private var currentSettings: AppSettings = AppSettings()
@@ -70,6 +94,15 @@ class OverlayService : Service() {
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var lastShownAt = 0L
 
+    /** True while the bubble is tucked halfway off-screen (idle). */
+    private var isTucked = false
+
+    /** The edge-docking animation, cancelled the moment the user touches. */
+    private var snapAnimator: android.animation.ValueAnimator? = null
+
+    /** 3 s of no interaction → dock to the edge, tuck and fade. */
+    private var idleRunnable: Runnable? = null
+
     /** One-shot: moves the bubble to its saved position once DataStore
      *  delivers it — replaces the main-thread runBlocking of earlier
      *  versions. */
@@ -83,10 +116,13 @@ class OverlayService : Service() {
     private var startParamsX = 0
     private var startParamsY = 0
 
+    /** Debounced auto re-translation after the page scrolls (auto mode). */
+    private var autoTranslateRunnable: Runnable? = null
+
     private val longPressRunnable = Runnable {
         longPressed = true
         bubble?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-        startTranslation(forceOcr = true)
+        onLongPressed()
     }
 
     override fun onCreate() {
@@ -96,7 +132,9 @@ class OverlayService : Service() {
         screenWidthPx = metrics.widthPixels
         screenHeightPx = metrics.heightPixels
         bubbleSizePx = (BUBBLE_SIZE_DP * metrics.density).toInt()
-        overlayManager = TranslationOverlayManager(this, windowManager)
+        panelManager = TranslationPanelManager(this, windowManager)
+        menuManager = QuickMenuManager(this, windowManager)
+        scanOverlay = ScanAnimationOverlay(this, windowManager)
 
         serviceScope.launch {
             ServiceLocator.settingsRepository.settings.collect { settings ->
@@ -155,9 +193,15 @@ class OverlayService : Service() {
         ScreenCaptureService.onProjectionFailed = null
         ScreenReaderAccessibilityService.onScreenScrolled = null
         mainHandler.removeCallbacksAndMessages(null)
+        snapAnimator?.cancel()
+        snapAnimator = null
+        scanOverlay?.stop()
+        scanOverlay = null
         hideBubble()
-        overlayManager?.release()
-        overlayManager = null
+        menuManager?.release()
+        menuManager = null
+        panelManager?.release()
+        panelManager = null
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -203,7 +247,7 @@ class OverlayService : Service() {
         view.setImageResource(R.drawable.ic_translate)
         view.setBackgroundResource(R.drawable.btn_floating_bg)
         view.scaleType = ImageView.ScaleType.CENTER_INSIDE
-        view.alpha = 0.85f
+        view.alpha = WAKE_ALPHA
         val padding = (10 * resources.displayMetrics.density).toInt()
         view.setPadding(padding, padding, padding, padding)
         view.contentDescription = getString(R.string.btn_translate_desc)
@@ -257,16 +301,43 @@ class OverlayService : Service() {
 
     /**
      * Called from the accessibility service when the underlying page changes
-     * or scrolls. Hides the visible translations so they never stay behind
-     * text that has moved away (feeds like Telegram).
+     * or scrolls. Two behaviours (v1.5):
+     *  - Auto-translate ON (and the panel is open): after a short debounce the
+     *    panel re-translates the new screen content by itself — the user no
+     *    longer "should always scan for any scroll".
+     *  - Auto OFF: the old behaviour — hide the panel when the text scrolls
+     *    away, unless KEEP was chosen in settings.
+     *
+     * Everything here runs on the main thread in one block, so cancel + re-
+     * schedule can never race (a posted cancel could otherwise kill the NEW
+     * debounce instead of the old one).
      */
     private fun onScreenContentChanged() {
-        if (currentSettings.scrollBehavior != ScrollBehavior.HIDE_ON_SCROLL) return
-        if (overlayManager?.isShowing != true) return
-        if (SystemClock.uptimeMillis() - lastShownAt < SCROLL_GRACE_MS) return
         mainHandler.post {
-            overlayManager?.hide()
+            cancelPendingAutoTranslate()
+            if (currentSettings.autoTranslateOnScroll) {
+                if (panelManager?.isShowing != true) return@post
+                if (SystemClock.uptimeMillis() - lastShownAt < SCROLL_GRACE_MS) return@post
+                val runnable = Runnable {
+                    autoTranslateRunnable = null
+                    if (currentSettings.autoTranslateOnScroll) {
+                        startTranslation(forceOcr = false, silent = true)
+                    }
+                }
+                autoTranslateRunnable = runnable
+                mainHandler.postDelayed(runnable, AUTO_TRANSLATE_DEBOUNCE_MS)
+                return@post
+            }
+            if (currentSettings.scrollBehavior != ScrollBehavior.HIDE_ON_SCROLL) return@post
+            if (panelManager?.isShowing != true) return@post
+            if (SystemClock.uptimeMillis() - lastShownAt < SCROLL_GRACE_MS) return@post
+            panelManager?.hide()
         }
+    }
+
+    private fun cancelPendingAutoTranslate() {
+        autoTranslateRunnable?.let { mainHandler.removeCallbacks(it) }
+        autoTranslateRunnable = null
     }
 
     private fun Int.clampX(): Int = coerceIn(0, (screenWidthPx - bubbleSizePx).coerceAtLeast(0))
@@ -279,6 +350,7 @@ class OverlayService : Service() {
         view.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    wakeUpBubble()
                     moved = false
                     longPressed = false
                     downRawX = event.rawX
@@ -310,11 +382,13 @@ class OverlayService : Service() {
                     mainHandler.removeCallbacks(longPressRunnable)
                     if (!moved) view.performClick()
                     if (moved) {
+                        // v1.5: dragging ONLY moves the button. The old
+                        // "translate on drop" is what made pointing feel bad.
                         persistBubblePosition(params)
-                        translateAfterDrag(event.rawX, event.rawY)
                     } else if (!longPressed) {
-                        startTranslation(forceOcr = false)
+                        toggleQuickMenu()
                     }
+                    armIdleTimer()
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> {
@@ -326,27 +400,183 @@ class OverlayService : Service() {
         }
     }
 
+    // -------------------------------------------------- idle docking (v1.5.0)
+
+    /**
+     * After [IDLE_TUCK_DELAY_MS] without interaction the button glides to
+     * the nearest screen edge, tucks itself halfway off-screen and fades to
+     * 40% — out of the user's way, but still one tap away. Any touch on it
+     * pops it fully back.
+     */
+    private fun armIdleTimer() {
+        idleRunnable?.let { mainHandler.removeCallbacks(it) }
+        if (menuManager?.isShowing == true) return // menu open: stay awake
+        val runnable = Runnable {
+            idleRunnable = null
+            val params = bubbleParams ?: return@Runnable
+            if (isTucked) return@Runnable
+            snapBubbleToNearestEdge(params) {
+                if (!isTucked) {
+                    tuckBubble()
+                    persistBubblePosition(params)
+                }
+            }
+        }
+        idleRunnable = runnable
+        mainHandler.postDelayed(runnable, IDLE_TUCK_DELAY_MS)
+    }
+
+    private fun snapBubbleToNearestEdge(
+        params: WindowManager.LayoutParams,
+        onDone: () -> Unit
+    ) {
+        val targetX =
+            if (params.x + bubbleSizePx / 2 < screenWidthPx / 2) 0
+            else (screenWidthPx - bubbleSizePx).coerceAtLeast(0)
+        val startX = params.x
+        val animator = android.animation.ValueAnimator.ofInt(startX, targetX).apply {
+            duration = SNAP_DURATION_MS
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { animation ->
+                params.x = animation.animatedValue as Int
+                try {
+                    bubble?.let { windowManager.updateViewLayout(it, params) }
+                } catch (t: Throwable) {
+                    // Window removed mid-animation.
+                }
+            }
+            addListener(object : android.animation.Animator.AnimatorListener {
+                override fun onAnimationStart(animation: android.animation.Animator) = Unit
+                override fun onAnimationRepeat(animation: android.animation.Animator) = Unit
+                override fun onAnimationCancel(animation: android.animation.Animator) = Unit
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    snapAnimator = null
+                    params.x = targetX
+                    onDone()
+                }
+            })
+        }
+        snapAnimator?.cancel()
+        snapAnimator = animator
+        animator.start()
+    }
+
+    private fun tuckBubble() {
+        val params = bubbleParams ?: return
+        val view = bubble ?: return
+        isTucked = true
+        val direction = if (params.x <= screenWidthPx / 2) -1f else 1f
+        view.animate()
+            .translationX(direction * bubbleSizePx * 0.45f)
+            .alpha(TUCKED_ALPHA)
+            .setDuration(SNAP_DURATION_MS)
+            .start()
+    }
+
+    private fun wakeUpBubble() {
+        idleRunnable?.let { mainHandler.removeCallbacks(it) }
+        idleRunnable = null
+        snapAnimator?.cancel()
+        snapAnimator = null
+        if (!isTucked) return
+        isTucked = false
+        bubble?.let { view ->
+            view.animate()
+                .translationX(0f)
+                .alpha(WAKE_ALPHA)
+                .setDuration(180L)
+                .start()
+        }
+    }
+
     private fun persistBubblePosition(params: WindowManager.LayoutParams) {
         serviceScope.launch {
             ServiceLocator.settingsRepository.saveBubblePosition(params.x, params.y)
         }
     }
 
+    // ---------------------------------------------------------------- quick menu
+
     /**
-     * Proximity translate: in NEAR_BUTTON mode, dropping the button next to
-     * some text translates that text immediately — no extra tap needed.
-     * Re-pointing the button somewhere else re-translates at the new spot.
-     * Tiny accidental drags are ignored.
+     * Tap on the bubble → the circular options menu. Tapping while it is
+     * already open simply closes it (one button, zero clutter).
      */
-    private fun translateAfterDrag(upRawX: Float, upRawY: Float) {
-        if (currentSettings.scope != TranslateScope.NEAR_BUTTON) return
-        val minDragPx = MIN_DRAG_FOR_PROXIMITY_DP * resources.displayMetrics.density
-        val dx = (upRawX - downRawX).toDouble()
-        val dy = (upRawY - downRawY).toDouble()
-        if (kotlin.math.hypot(dx, dy) < minDragPx) return
-        // Pointing somewhere else counts as a new request, not a toggle-off.
-        overlayManager?.hide()
-        startTranslation(forceOcr = false)
+    private fun toggleQuickMenu() {
+        val menu = menuManager ?: return
+        if (menu.isShowing) {
+            menu.hide()
+            armIdleTimer()
+            return
+        }
+        wakeUpBubble()
+        val bubbleView = bubble ?: return
+        val loc = IntArray(2)
+        bubbleView.getLocationOnScreen(loc)
+        val cx = loc[0] + bubbleView.width / 2
+        val cy = loc[1] + bubbleView.height / 2
+        menu.show(cx, cy, currentSettings.autoTranslateOnScroll) { option ->
+            when (option) {
+                QuickMenuManager.Option.TRANSLATE -> startTranslation(forceOcr = false)
+                QuickMenuManager.Option.OCR -> startTranslation(forceOcr = true)
+                QuickMenuManager.Option.AUTO -> toggleAutoTranslate()
+                QuickMenuManager.Option.CLOSE -> {
+                    panelManager?.hide()
+                    menu.hide()
+                }
+                QuickMenuManager.Option.POWER_OFF -> powerOff()
+            }
+            // The menu is gone → restart the idle timer so the bubble can
+            // dock away again after the user finishes interacting.
+            if (option != QuickMenuManager.Option.POWER_OFF) armIdleTimer()
+        }
+    }
+
+    /**
+     * POWER OFF from the circular panel: writes `enabled = false` so the app
+     * does not resurrect itself, stops every overlay, confirms with a short
+     * vibration. The DataStore write runs on an ephemeral scope because
+     * [stopEverything] tears the service scope down immediately after.
+     */
+    private fun powerOff() {
+        bubble?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            runCatching { ServiceLocator.settingsRepository.setEnabled(false) }
+        }
+        stopEverything()
+    }
+
+    private fun toggleAutoTranslate() {
+        val newValue = !currentSettings.autoTranslateOnScroll
+        serviceScope.launch {
+            ServiceLocator.settingsRepository.setAutoTranslateOnScroll(newValue)
+        }
+        menuManager?.refreshAutoLabel(newValue)
+        toast(
+            if (newValue) R.string.toast_auto_on else R.string.toast_auto_off
+        )
+    }
+
+    // ---------------------------------------------------------------- long-press
+
+    /**
+     * One button does the closing too: a long-press closes whatever is open
+     * (menu, panel, both). When nothing is open it becomes point-and-
+     * translate — the texts closest to the button are translated, so the
+     * user just parks the button next to a paragraph and holds it.
+     */
+    private fun onLongPressed() {
+        var closedSomething = false
+        if (menuManager?.isShowing == true) {
+            menuManager?.hide()
+            closedSomething = true
+        }
+        if (panelManager?.isShowing == true) {
+            panelManager?.hide()
+            closedSomething = true
+        }
+        if (!closedSomething) {
+            startTranslation(forceOcr = false, nearButtonOnly = true)
+        }
     }
 
     private fun setBubbleBusy(busy: Boolean) {
@@ -362,47 +592,66 @@ class OverlayService : Service() {
 
     // ---------------------------------------------------------------- translation
 
-    private fun startTranslation(forceOcr: Boolean) {
+    /**
+     * Reads and translates the current screen into the bottom panel.
+     *
+     * @param forceOcr       skip accessibility text and use image OCR.
+     * @param nearButtonOnly translate only the texts close to the button
+     *                       (long-press pointing; also forced when the
+     *                       scope setting is NEAR_BUTTON).
+     * @param silent         auto-refresh mode: no "no text" / status toasts,
+     *                       so an empty screen after scrolling does not nag.
+     */
+    private fun startTranslation(
+        forceOcr: Boolean,
+        nearButtonOnly: Boolean = false,
+        silent: Boolean = false
+    ) {
         if (isTranslating) return
-        if (overlayManager?.isShowing == true) {
-            overlayManager?.hide()
-            return
-        }
         isTranslating = true
         setBubbleBusy(true)
+        if (!silent) {
+            // The beloved scan animation: a teal laser sweeps the screen once,
+            // with a soft haptic tick — the wait feels instant.
+            mainHandler.post {
+                scanOverlay?.playScanAnimation()
+                bubble?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            }
+        }
         serviceScope.launch {
             try {
-                val items = collectTexts(forceOcr)
+                val items = collectTexts(forceOcr, silent)
                 if (items != null) {
-                    val selected = filterNearButton(items)
+                    val selected = filterNearButton(items, nearButtonOnly)
                     when {
-                        items.isNotEmpty() && selected.isEmpty() -> {
+                        items.isNotEmpty() && selected.isEmpty() && !silent ->
                             toast(R.string.toast_no_text_near)
-                        }
-                        selected.isEmpty() -> {
+                        selected.isEmpty() && !silent ->
                             toast(R.string.toast_no_text)
-                        }
                         else -> {
                             val boxes = TranslationEngine.translate(
                                 selected,
                                 SystemUtils.isOnline(this@OverlayService)
                             ) { event ->
-                                handleEngineEvent(event)
+                                handleEngineEvent(event, silent)
                             }
                             if (boxes.isNotEmpty()) {
                                 mainHandler.post {
                                     lastShownAt = SystemClock.uptimeMillis()
-                                    overlayManager?.show(boxes, currentSettings.autoHideMs)
+                                    panelManager?.show(boxes, currentSettings.autoHideMs)
                                 }
                             }
                         }
                     }
                 }
             } catch (t: Throwable) {
-                toast(getString(R.string.toast_translation_error, t.message ?: t.javaClass.simpleName))
+                if (!silent) {
+                    toast(getString(R.string.toast_translation_error, t.message ?: t.javaClass.simpleName))
+                }
             } finally {
                 isTranslating = false
                 setBubbleBusy(false)
+                mainHandler.post { armIdleTimer() }
             }
         }
     }
@@ -411,8 +660,12 @@ class OverlayService : Service() {
      * Reads the current screen. Accessibility text is preferred; when it is
      * not available (images, games) the screen is captured and OCRed.
      * Returns null when screen-capture consent is still pending.
+     *
+     * When [silent] is true (auto-refresh after scrolling), nothing user-
+     * facing happens on failure — in particular the consent activity is
+     * never launched from a background scroll event.
      */
-    private suspend fun collectTexts(forceOcr: Boolean): List<ScreenTextItem>? {
+    private suspend fun collectTexts(forceOcr: Boolean, silent: Boolean): List<ScreenTextItem>? {
         if (!forceOcr) {
             val accessibilityTexts = ScreenReaderAccessibilityService.collectCurrentTexts()
             if (accessibilityTexts != null &&
@@ -425,14 +678,16 @@ class OverlayService : Service() {
         val captureService = ScreenCaptureService.activeService()
         if (captureService == null) {
             pendingOcrTranslate = true
-            toast(R.string.toast_consent_needed)
-            try {
-                startActivity(
-                    Intent(this, ProjectionConsentActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            } catch (t: Throwable) {
-                toast(R.string.toast_capture_failed)
+            if (!silent) {
+                toast(R.string.toast_consent_needed)
+                try {
+                    startActivity(
+                        Intent(this, ProjectionConsentActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (t: Throwable) {
+                    toast(R.string.toast_capture_failed)
+                }
             }
             return null
         }
@@ -448,7 +703,7 @@ class OverlayService : Service() {
             }
         }
         if (bitmap == null) {
-            toast(R.string.toast_capture_failed)
+            if (!silent) toast(R.string.toast_capture_failed)
             return emptyList()
         }
         val items = try {
@@ -460,12 +715,16 @@ class OverlayService : Service() {
     }
 
     /**
-     * In NEAR_BUTTON scope, keeps only the text whose center is close to the
-     * floating button, so the user can point the button at one sentence or
-     * paragraph at a time. In WHOLE_SCREEN scope the list is returned as is.
+     * Keeps only the text whose center is close to the floating button, so
+     * the user can point the button at one sentence or paragraph at a time.
+     * Used by the long-press pointing gesture, and always active when the
+     * scope setting is NEAR_BUTTON.
      */
-    private fun filterNearButton(items: List<ScreenTextItem>): List<ScreenTextItem> {
-        if (currentSettings.scope != TranslateScope.NEAR_BUTTON) return items
+    private fun filterNearButton(
+        items: List<ScreenTextItem>,
+        force: Boolean
+    ): List<ScreenTextItem> {
+        if (!force && currentSettings.scope != TranslateScope.NEAR_BUTTON) return items
         val bubbleView = bubble ?: return items
         val density = resources.displayMetrics.density
         val radius = NEAR_RADIUS_DP * density
@@ -483,7 +742,8 @@ class OverlayService : Service() {
         }
     }
 
-    private fun handleEngineEvent(event: TranslationEngine.Event) {
+    private fun handleEngineEvent(event: TranslationEngine.Event, silent: Boolean) {
+        if (silent) return
         when (event) {
             is TranslationEngine.Event.ModelDownloadStarted ->
                 toast(getString(R.string.toast_model_downloading, event.languageName))
@@ -492,7 +752,7 @@ class OverlayService : Service() {
             TranslationEngine.Event.AllTextAlreadyPersian ->
                 toast(R.string.toast_already_persian)
             TranslationEngine.Event.PashtoNotSupported ->
-                toast(getString(R.string.toast_pashto_unsupported), Toast.LENGTH_LONG)
+                toast(R.string.toast_pashto_unsupported, Toast.LENGTH_LONG)
             is TranslationEngine.Event.ModelsMissingOffline ->
                 toast(
                     getString(
@@ -518,8 +778,14 @@ class OverlayService : Service() {
 
     private fun stopEverything() {
         running = false
+        snapAnimator?.cancel()
+        snapAnimator = null
+        idleRunnable?.let { mainHandler.removeCallbacks(it) }
+        idleRunnable = null
+        scanOverlay?.stop()
         hideBubble()
-        overlayManager?.hide()
+        menuManager?.hide()
+        panelManager?.hide()
         if (ScreenCaptureService.isRunning) {
             ScreenCaptureService.stop(this)
         }
@@ -538,7 +804,16 @@ class OverlayService : Service() {
         private const val MIN_ACCESSIBILITY_CHARS = 12
         private const val NEAR_RADIUS_DP = 180
         private const val SCROLL_GRACE_MS = 800L
-        private const val MIN_DRAG_FOR_PROXIMITY_DP = 24
+
+        /** How long the page must be still after a scroll before the panel
+         *  refreshes itself (auto-translate mode). */
+        private const val AUTO_TRANSLATE_DEBOUNCE_MS = 700L
+
+        /** Idle time before the bubble docks to the edge and tucks away. */
+        private const val IDLE_TUCK_DELAY_MS = 3000L
+        private const val SNAP_DURATION_MS = 220L
+        private const val TUCKED_ALPHA = 0.40f
+        private const val WAKE_ALPHA = 0.92f
 
         @Volatile
         private var running = false

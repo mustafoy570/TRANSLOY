@@ -1,15 +1,17 @@
 package com.dari.screentranslator
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.core.os.LocaleListCompat
+import androidx.activity.compose.setContent
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,14 +21,35 @@ import com.dari.screentranslator.ui.HomeScreen
 import com.dari.screentranslator.ui.ModelsScreen
 import com.dari.screentranslator.ui.theme.TranslatorTheme
 
-class MainActivity : ComponentActivity() {
+/**
+ * AppCompatActivity (v1.5.0): required by AppCompatDelegate per-app locales,
+ * which powers the in-app language switch (English ⇄ دری) on Android 8–12 —
+ * on Android 13+ the choice also appears in the system per-app language
+ * settings.
+ */
+class MainActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply the stored language BEFORE the first frame so the Dari UI
+        // never flashes in English first. Below API 33 AppCompat does not
+        // persist locales itself, so the stored choice is re-applied here.
+        applyStoredLanguage()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             TranslatorTheme {
                 TranslatorAppRoot()
             }
+        }
+    }
+
+    private fun applyStoredLanguage() {
+        val stored = ServiceLocator.settingsRepository.getAppLanguage()
+        val applied = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        if (!applied.startsWith(stored)) {
+            AppCompatDelegate.setApplicationLocales(
+                LocaleListCompat.forLanguageTags(stored)
+            )
         }
     }
 }

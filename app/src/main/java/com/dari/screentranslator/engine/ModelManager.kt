@@ -59,11 +59,26 @@ object ModelManager {
         false
     }
 
-    suspend fun downloadModel(code: String) {
+    /**
+     * Downloads the model for [code]. When [requireWifi] is true the download
+     * only runs on Wi-Fi (ML Kit DownloadConditions — the model-update policy
+     * "Auto (Wi-Fi only)" uses this).
+     *
+     * Calling this for a model that is ALREADY downloaded re-checks Google's
+     * manifest and pulls a newer version only if one exists — that is the
+     * whole "check for updates" mechanism used by the update policy and the
+     * manual "Check for updates" button.
+     */
+    suspend fun downloadModel(code: String, requireWifi: Boolean = false) {
+        val conditions = if (requireWifi) {
+            DownloadConditions.Builder().requireWifi().build()
+        } else {
+            DownloadConditions.Builder().build()
+        }
         RemoteModelManager.getInstance()
             .download(
                 TranslateRemoteModel.Builder(code).build(),
-                DownloadConditions.Builder().build()
+                conditions
             )
             .await()
     }

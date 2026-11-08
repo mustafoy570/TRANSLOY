@@ -43,25 +43,25 @@ jobs:
         run: |
           apk="app/build/outputs/apk/debug/app-debug.apk"
           test -f "$apk"
-          cp "$apk" app/build/outputs/apk/debug/transloy-v2.0.0.apk
-          ls -lh app/build/outputs/apk/debug/transloy-v2.0.0.apk
+          cp "$apk" app/build/outputs/apk/debug/transloy-v3.0.0.apk
+          ls -lh app/build/outputs/apk/debug/transloy-v3.0.0.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: transloy-v2.0.0-apk
-          path: app/build/outputs/apk/debug/transloy-v2.0.0.apk
+          name: transloy-v3.0.0-apk
+          path: app/build/outputs/apk/debug/transloy-v3.0.0.apk
           if-no-files-found: error
 
       - name: Publish APK on GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.0
-          name: Transloy v2.0.0
+          tag_name: v3.0.0
+          name: Transloy v3.0.0
           body: |
-            Transloy second version. Download `transloy-v2.0.0.apk` below and install it on your Android device.
+            Transloy third version. Download `transloy-v3.0.0.apk` below and install it on your Android device.
 
             This APK is signed with the GitHub Actions debug key. If Android refuses an update because the signing key differs from an earlier installation, uninstall the earlier app first; uninstalling removes its downloaded models and settings.
-          files: app/build/outputs/apk/debug/transloy-v2.0.0.apk
+          files: app/build/outputs/apk/debug/transloy-v3.0.0.apk
           fail_on_unmatched_files: true
           make_latest: true

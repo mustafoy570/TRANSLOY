@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Translator" parent="android:Theme.Material.Light.NoActionBar">
+    <!-- AppCompat parent (v1.5.0): AppCompatActivity + per-app locales
+         (the in-app English ⇄ دری switch) need an AppCompat theme. -->
+    <style name="Theme.Translator" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
 
     <!-- Fully transparent trampoline theme for the projection consent activity. -->
-    <style name="Theme.Translator.Consent" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.Translator.Consent" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>

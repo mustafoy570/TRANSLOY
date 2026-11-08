@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher icon background (v1.5 redesign): deep-teal vertical gradient. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:startColor="#FF0B5E66"
+        android:centerColor="#FF0E7C86"
+        android:endColor="#FF12939B"
+        android:type="linear" />
+</shape>

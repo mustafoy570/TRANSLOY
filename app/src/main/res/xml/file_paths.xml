@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider paths for the Zapya offline share pack: the app's own
+     external files folder (no storage permission needed to share from it). -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path
+        name="share"
+        path="share/" />
+    <files-path
+        name="internal"
+        path="share/" />
+</paths>

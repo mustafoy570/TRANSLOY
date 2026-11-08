@@ -1,13 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher icon foreground (v1.5.0 polish): a white speech bubble holding a
+  right arrow and a left arrow — "translation" — in the app's teal, with a
+  bright laser accent bar under the bubble echoing the scan animation.
+  Everything sits inside the 66dp adaptive-icon safe zone (center 21..87) of
+  the 108dp canvas, so no launcher shape crops it.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Speech bubble body (rounded rect, corner radius 12) with tail. -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M32,41 L58,41 L58,33 L74,48 L58,63 L58,55 L32,55 Z" />
+        android:pathData="M42,28 L78,28 A12,12 0 0 1 90,40 L90,56 A12,12 0 0 1 78,68 L58,68 L47,80 L47,68 L42,68 A12,12 0 0 1 30,56 L30,40 A12,12 0 0 1 42,28 Z" />
+
+    <!-- Arrow pointing right (top): thicker bar + bold head. -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M76,67 L50,67 L50,75 L34,60 L50,45 L50,53 L76,53 Z" />
+        android:fillColor="#FF0E7C86"
+        android:pathData="M43,36 L63,36 L63,41 L43,41 Z" />
+    <path
+        android:fillColor="#FF0E7C86"
+        android:pathData="M61,30.5 L73,38.5 L61,46.5 Z" />
+
+    <!-- Arrow pointing left (bottom): thicker bar + bold head. -->
+    <path
+        android:fillColor="#FF0E7C86"
+        android:pathData="M58,52 L78,52 L78,57 L58,57 Z" />
+    <path
+        android:fillColor="#FF0E7C86"
+        android:pathData="M60,46.5 L48,54.5 L60,62.5 Z" />
+
+    <!-- Laser accent under the bubble: the scan animation's teal line. -->
+    <path
+        android:fillColor="#FF26E6D0"
+        android:pathData="M33,81.5 L87,81.5 L87,84.8 L33,84.8 Z" />
 </vector>

@@ -22,10 +22,11 @@ enum class OcrScript {
 }
 
 /**
- * What part of the screen is translated when the floating button is tapped.
+ * What part of the screen is translated (v1.5).
  * WHOLE_SCREEN: every visible text at once.
  * NEAR_BUTTON: only the text close to the button, so the user can point the
- * button at one paragraph/sentence at a time.
+ * button at one paragraph/sentence at a time. Pointing is done with a
+ * LONG-PRESS next to the text (dragging only moves the button).
  */
 enum class TranslateScope {
     WHOLE_SCREEN,
@@ -39,6 +40,18 @@ enum class TranslateScope {
 enum class ScrollBehavior {
     HIDE_ON_SCROLL,
     KEEP
+}
+
+/**
+ * v1.5.0 — who decides when Google's ML Kit language models get updated:
+ *  ASK_FIRST  ask the user first (a small dialog, at most once a day);
+ *  AUTO_WIFI  check and update silently, Wi-Fi only;
+ *  NEVER      never touch the network for updates (manual button only).
+ */
+enum class ModelUpdatePolicy {
+    ASK_FIRST,
+    AUTO_WIFI,
+    NEVER
 }
 
 /** A readable piece of text with its position on the screen. */

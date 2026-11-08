@@ -26,6 +26,19 @@ import kotlinx.coroutines.withContext
  *  - When a model is missing and the device is OFFLINE, the group is skipped
  *    IMMEDIATELY with a clear, actionable event — no 60-second network
  *    timeout and no cryptic ML Kit exception.
+ *
+ * v1.5.0 DARI POLISH (28-screenshot field feedback):
+ *  - Source texts are cleaned before translation (garbage prefixes, soft
+ *    line breaks, doubled spaces, " | " separators).
+ *  - Clock digits, battery percentages, e-mails, URLs, USSD codes and
+ *    no-letter strings are never sent to the translator.
+ *  - Every result passes through [polishDariTranslation]: Afghan month
+ *    names (فبروری، جنوری، اپریل، آگست), Afghan UI wording (اطلاعیه‌ها not
+ *    اطلاع‌رسانی‌ها، هزینه تماس not اتهامات تماس), and plural ها/های glued
+ *    with ZWNJ so "ها" never drifts to the wrong side of the sentence.
+ *  - Output is wrapped in a Right-to-Left Mark (U+200F) and embedded Latin
+ *    fragments (numbers, brands, e-mails) in directional isolates (U+2066…
+ *    U+2069), so mixed Dari/Latin lines read in the right order everywhere.
  */
 object TranslationEngine {
 
@@ -47,6 +60,60 @@ object TranslationEngine {
 
     private const val CACHE_LIMIT = 500
     private val cache = LinkedHashMap<String, String>(64, 0.75f, true)
+
+    /** Right-to-Left Mark — forces the paragraph direction of the output. */
+    private const val RLM = "\u200F"
+
+    /** Zero-Width Non-Joiner — glues Persian plural suffixes to their word. */
+    private const val ZWNJ = "\u200C"
+
+    /** LTR isolate start / terminator (U+2066…U+2069). */
+    private const val LRI = "\u2066"
+    private const val PDI = "\u2069"
+
+    private val EMAIL_OR_URL_REGEX = Regex(
+        "^(https?://|www\\.)\\S+$|^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+    )
+
+    /** Screen furniture that must never reach the translator. */
+    private val GARBAGE_PREFIX_REGEX = Regex("^[0O•●▪✔✓:]\\s+")
+
+    /**
+     * UI strings ML Kit translates with Iranian wording; the app speaks
+     * Afghan Dari. Exact source match → exact Dari replacement.
+     */
+    private val DARI_UI_OVERRIDES = mapOf(
+        "unmute" to "لغو بی‌صدا",
+        "mute" to "بی‌صدا",
+        "pinned message" to "پیام سنجاق‌شده",
+        "notifications" to "اطلاعیه‌ها",
+        "notification" to "اطلاعیه",
+        "call charges may apply" to "ممکن است هزینه تماس دریافت شود",
+        "online" to "آنلاین",
+        "typing" to "در حال نوشتن…",
+        "draft" to "پیش‌نویس",
+        "last seen recently" to "آخرین بازدید اخیراً",
+        "reply" to "پاسخ",
+        "forward" to "ارسال به دیگری",
+        "archive" to "بایگانی",
+        "delete" to "حذف",
+        "settings" to "تنظیمات",
+        "search" to "جستجو",
+        "share" to "هم‌رسانی",
+        "cancel" to "لغو",
+        "save to gallery" to "ذخیره در گالری",
+        "view profile" to "دیدن پروفایل"
+    )
+
+    /** Iranian month names → the Afghan month names used in Dari. */
+    private val AFGHAN_MONTH_FIXES = listOf(
+        "ژانویه" to "جنوری",
+        "فوریه" to "فبروری",
+        "آوریل" to "اپریل",
+        "ژوئن" to "جون",
+        "ژوئیه" to "جولای",
+        "اوت" to "آگست"
+    )
 
     /** Pashto-only letters: ML Kit has no Pashto model, so text containing
      *  these is reported honestly instead of as "nothing to translate". */
@@ -77,8 +144,9 @@ object TranslationEngine {
         onEvent: (Event) -> Unit
     ): List<TranslatedBox> = withContext(Dispatchers.Default) {
         val cleaned = items.asSequence()
-            .map { it.copy(text = it.text.trim()) }
-            .filter { it.text.length >= 2 }
+            .map { it.copy(text = cleanSourceText(it.text)) }
+            .filter { !shouldSkipTranslation(it.text) }
+            .map { it.copy(text = normalizeSourceText(it.text)) }
             .toList()
         if (cleaned.isEmpty()) return@withContext emptyList()
 
@@ -94,7 +162,7 @@ object TranslationEngine {
             )
             try {
                 for (text in uniqueTexts) {
-                    tagByText[text] = identifier.identifyLanguage(text).await()
+                    tagByText[text] = identifier.processText(text).await()
                 }
             } finally {
                 identifier.close()
@@ -200,16 +268,25 @@ object TranslationEngine {
             onEvent(Event.ModelsMissingOffline(missingOffline.toList()))
         }
 
-        // 3. Build overlay boxes for every item that has a translation.
+        // 3. Build overlay boxes for every item that has a translation,
+        //    each one passed through the Dari polish pass.
         val boxes = ArrayList<TranslatedBox>(cleaned.size)
         for (item in cleaned) {
             val language = sourceLangByText[item.text] ?: continue
             val translated = cacheGet("${language}|${item.text}") ?: continue
             if (translated.isBlank()) continue
-            boxes.add(TranslatedBox(item.id, item.text, translated, item.bounds, item.source))
+            boxes.add(
+                TranslatedBox(
+                    item.id,
+                    item.text,
+                    polishDariTranslation(item.text, translated),
+                    item.bounds,
+                    item.source
+                )
+            )
         }
-        if (boxes.isEmpty()) {
-            lastFailure?.let { onEvent(Event.Failed(it)) }
+        if (boxes.isEmpty() && lastFailure != null) {
+            onEvent(Event.Failed(lastFailure))
         }
         boxes
     }
@@ -217,6 +294,9 @@ object TranslationEngine {
     /**
      * Translates [texts] from [language] into Persian. When [downloadFirst]
      * is true the missing model is downloaded first (online path only).
+     * Strings containing " | " / " • " separators are split, translated part
+     * by part and re-joined — otherwise ML Kit scrambles the pipe-separated
+     * pieces into one wrong sentence.
      */
     private suspend fun translateWith(
         language: String,
@@ -234,12 +314,101 @@ object TranslationEngine {
                 translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).await()
             }
             for (text in texts) {
-                cachePut("$language|$text", translator.translate(text).await())
+                cachePut("$language|$text", translateSingleText(translator, text))
             }
         } catch (t: Throwable) {
             onFail(t.message ?: t.javaClass.simpleName)
         } finally {
             translator.close()
         }
+    }
+
+    /** Splits separator-joined strings so each piece is translated on its own. */
+    private suspend fun translateSingleText(
+        translator: com.google.mlkit.nl.translate.Translator,
+        text: String
+    ): String {
+        val separators = listOf(" | ", " • ", " •")
+        val separator = separators.firstOrNull { text.contains(it) } ?: return translator.translate(text).await()
+        val parts = text.split(separator).map { it.trim() }.filter { it.isNotEmpty() }
+        if (parts.size < 2) return translator.translate(text).await()
+        val translatedParts = parts.map { part ->
+            runCatching { translator.translate(part).await() }.getOrDefault(part)
+        }
+        return translatedParts.joinToString("$RLM ${separator.trim()} $RLM")
+    }
+
+    // ------------------------------------------------------------ text hygiene
+
+    /**
+     * Removes OCR/accessibility junk BEFORE language detection: soft line
+     * breaks, leading bullet/checkmark/zero noise and doubled spaces.
+     * " | " / " • " separators are KEPT — [translateSingleText] needs them to
+     * split the string and translate each piece on its own.
+     */
+    internal fun cleanSourceText(raw: String): String = raw
+        .replace('\n', ' ')
+        .replace(GARBAGE_PREFIX_REGEX, "")
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+
+    /**
+     * Joins the soft line breaks ML Kit left inside one paragraph ("Call
+     * charges" read as "Call\ncharges") back into normal spaces. Real list
+     * items (starting with •, - or a digit) keep their line structure.
+     */
+    private fun normalizeSourceText(raw: String): String = raw
+        .replace(Regex("(?<![.!?:|•\\n])\\n(?!\\s*[•\\-0-9])"), " ")
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+
+    /** Clock digits, 87%, *555#, e-mails, URLs, no-letter strings: skip. */
+    internal fun shouldSkipTranslation(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.length < 2) return true
+        if (EMAIL_OR_URL_REGEX.containsMatchIn(trimmed)) return true
+        if (trimmed.none { it.isLetter() }) return true // "12:45", "87%", "*555#"
+        if (trimmed.matches(Regex("\\d{1,2}[:/]\\d{2}([,:]\\d{2})?(\\s?[APap][Mm])?"))) return true
+        return false
+    }
+
+    /**
+     * Turns ML Kit's Iranian-flavoured Persian into Afghan Dari and makes the
+     * line RTL-safe:
+     *  1. Exact-match UI overrides ("unmute" → «لغو بی‌صدا» …).
+     *  2. Month-name fixes (فوریه → فبروری …) and wording fixes.
+     *  3. Plural ها/های attached to the previous word with ZWNJ.
+     *  4. Pure-Latin runs (numbers, brands, e-mails) wrapped in LTR isolates.
+     *  5. The whole line prefixed with RLM so any TextView renders it RTL.
+     */
+    internal fun polishDariTranslation(source: String, translated: String): String {
+        DARI_UI_OVERRIDES[source.lowercase().trim()]?.let { return "$RLM$it" }
+
+        var fixed = translated.trim()
+        for ((iranian, afghan) in AFGHAN_MONTH_FIXES) {
+            fixed = fixed.replace(iranian, afghan)
+        }
+        fixed = fixed
+            .replace("اتهامات تماس", "هزینه تماس")
+            .replace("هزینه‌های تماس", "هزینه تماس")
+            .replace("اطلاع‌رسانی‌ها", "اطلاعیه‌ها")
+            .replace("اطلاع‌رسانی", "اطلاعیه")
+            // "ها" / "های" detached from their word by the translator.
+            .replace(
+                Regex("([\\u0600-\\u06FF])\\s+ها(?=[\\s.!،؟:]|$)"),
+                "$1$ZWNJها"
+            )
+            .replace(
+                Regex("([\\u0600-\\u06FF])\\s+های(?=[\\s.!،؟:]|$)"),
+                "$1$ZWNJهای"
+            )
+            .trim()
+
+        // Wrap Latin/number runs in directional isolates so they keep their
+        // own order inside the RTL line ("Play Store", "4K", "v2.1").
+        fixed = Regex("[A-Za-z0-9][A-Za-z0-9 .&'/+:-]*[A-Za-z0-9%]|[A-Za-z0-9]")
+            .replace(fixed) { match -> "$LRI${match.value}$PDI" }
+
+        return "$RLM$fixed"
     }
 }

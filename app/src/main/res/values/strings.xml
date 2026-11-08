@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Dari Screen Translator</string>
+    <string name="app_name">TRANSLOY</string>
 
     <!-- Home -->
     <string name="toggle_section_title">Screen translation</string>
@@ -35,16 +35,16 @@
 
     <!-- Translation mode -->
     <string name="mode_section">Translation mode</string>
-    <string name="scope_title">What to translate when you tap</string>
+    <string name="scope_title">What gets translated</string>
     <string name="scope_whole">Whole screen</string>
     <string name="scope_near">Near the button</string>
     <string name="scope_desc_whole">Every text on the screen is translated at once.</string>
-    <string name="scope_desc_near">Only the text close to the button is translated. Drag the button right onto the text — it translates the moment you release it.</string>
+    <string name="scope_desc_near">Only the text close to the button is translated. Park the button next to a sentence and long-press it — dragging only moves the button.</string>
     <string name="scroll_title">When the page scrolls</string>
     <string name="scroll_hide">Hide</string>
     <string name="scroll_keep">Keep</string>
     <string name="scroll_desc_hide">Translations disappear as soon as the page scrolls (recommended for feeds like Telegram).</string>
-    <string name="scroll_desc_keep">Translations stay until you tap the button again.</string>
+    <string name="scroll_desc_keep">Translations stay until you close the panel.</string>
     <string name="perm_capture">Screen capture for images &amp; games</string>
     <string name="capture_grant">Enable now</string>
     <string name="models_update_note">Installing a newer APK keeps your downloaded languages, models and settings. Only uninstalling the app removes them.</string>
@@ -79,7 +79,7 @@
     <string name="guide_title">Setup guide</string>
     <string name="guide_intro">Complete these steps once. Tap each card to open its settings page.</string>
     <string name="guide_step_overlay_title">Allow display over other apps</string>
-    <string name="guide_step_overlay_desc">Needed to show the floating button and the translated boxes.</string>
+    <string name="guide_step_overlay_desc">Needed to show the floating button, the quick menu and the translation panel.</string>
     <string name="guide_step_notifications_title">Allow notifications</string>
     <string name="guide_step_notifications_desc">Required on Android 13 and newer so the translation services can run in the background.</string>
     <string name="guide_step_accessibility_title">Enable the accessibility service</string>
@@ -92,11 +92,13 @@
     <!-- How to -->
     <string name="how_to_title">How to use</string>
     <string name="how_to_1">Toggle the big switch on the home screen.</string>
-    <string name="how_to_2">A small floating button appears over every app. Drag it anywhere.</string>
-    <string name="how_to_3">Tap it once to translate — the whole screen, or only the text near the button (your choice under Translation mode). In “Near the button” mode you can also simply drag the button onto the text and release: translation starts by itself.</string>
-    <string name="how_to_4">Tap it again to hide the translations. They also hide automatically when the page scrolls, if you turned that on.</string>
-    <string name="how_to_5">Long-press the button to force image (OCR) translation.</string>
-    <string name="how_to_6">Download language models in advance while you have internet.</string>
+    <string name="how_to_2">A small floating button appears over every app. Drag it anywhere — after 3 idle seconds it docks to the edge and fades away until you touch it.</string>
+    <string name="how_to_3">Tap it once to open the circular quick menu: Translate screen, Image (OCR), Auto on scroll, Close, and Turn off. The menu closes itself after you pick.</string>
+    <string name="how_to_4">Long-press next to the text to translate just that part. A long-press also closes the menu and the translation panel — one button does everything.</string>
+    <string name="how_to_5">Translations open in a panel at the bottom: the original text on top, the Dari translation below, fully scrollable and never cut off. Tap any translation to copy it.</string>
+    <string name="how_to_6">With Auto on scroll enabled, the panel refreshes by itself after the page scrolls — no need to tap again.</string>
+    <string name="how_to_7">Download language models in advance while you have internet.</string>
+    <string name="how_to_8">Share the app with a friend through Zapya — models included (Settings → Share without internet). They install the app, then import the models file: full offline translation, zero internet.</string>
 
     <string name="back">Back</string>
 
@@ -104,21 +106,21 @@
     <string name="channel_overlay">Translation overlay</string>
     <string name="channel_capture">Screen capture</string>
     <string name="notif_overlay_title">Translation is ON</string>
-    <string name="notif_overlay_text">Tap the floating button to translate the screen.</string>
+    <string name="notif_overlay_text">Tap the floating button to open the quick menu.</string>
     <string name="notif_capture_title">Screen capture active</string>
     <string name="notif_capture_text">Used only while translating images and games.</string>
     <string name="notif_action_turn_off">Turn off</string>
     <string name="notif_action_stop">Stop</string>
-    <string name="btn_translate_desc">Translate screen</string>
+    <string name="btn_translate_desc">Open translation menu</string>
 
     <!-- Accessibility service -->
-    <string name="accessibility_service_label">Dari Screen Translator</string>
+    <string name="accessibility_service_label">TRANSLOY</string>
     <string name="accessibility_service_summary">Reads on-screen text so it can be translated into Persian/Dari</string>
     <string name="accessibility_service_description">This service reads the text of the current screen only when you tap the floating translate button, and passes it to the on-device translator. Password fields and text input fields are never read. Nothing leaves your phone.</string>
 
     <!-- Toasts -->
     <string name="toast_no_text">No readable text found on this screen</string>
-    <string name="toast_no_text_near">No text near the button. Move it right next to the text and tap again</string>
+    <string name="toast_no_text_near">No text near the button. Park it next to the text and long-press again</string>
     <string name="toast_nothing_to_translate">Nothing to translate (already Persian or unsupported)</string>
     <string name="toast_capture_failed">Could not capture the screen. Try again</string>
     <string name="toast_consent_needed">Allow screen capture to translate images</string>
@@ -127,6 +129,53 @@
     <string name="toast_model_missing">Model for %1$s is missing. Open the app to download it</string>
     <string name="toast_translation_error">Translation error: %1$s</string>
     <string name="toast_overlay_permission">Allow “Display over other apps” first</string>
+
+    <!-- Quick menu & panel (v1.5) -->
+    <string name="menu_translate">Translate screen</string>
+    <string name="menu_ocr">Image (OCR)</string>
+    <string name="menu_auto_on">Auto: ON</string>
+    <string name="menu_auto_off">Auto: OFF</string>
+    <string name="menu_close">Close</string>
+    <string name="menu_power_off">Turn off</string>
+    <string name="panel_title">Translation</string>
+    <string name="panel_close_desc">Close translations</string>
+    <string name="panel_copy_toast">Copied — کپی شد</string>
+    <string name="toast_auto_on">Auto-translate on scroll: ON</string>
+    <string name="toast_auto_off">Auto-translate on scroll: OFF</string>
+    <string name="setting_auto_scroll_title">Auto-translate when scrolling</string>
+    <string name="setting_auto_scroll_desc">While the panel is open it refreshes by itself after the page scrolls — no need to tap again.</string>
+
+    <!-- General settings: language + model updates (v1.5.0) -->
+    <string name="settings_general_section">App settings</string>
+    <string name="settings_language">App language</string>
+    <string name="lang_english">English</string>
+    <string name="lang_dari">دری</string>
+    <string name="settings_update_policy">Model updates</string>
+    <string name="update_policy_ask">Ask me first</string>
+    <string name="update_policy_auto">Auto (Wi-Fi)</string>
+    <string name="update_policy_never">Never</string>
+    <string name="update_desc_ask">Google improves the language models over time. The app asks before downloading anything (recommended).</string>
+    <string name="update_desc_auto">Model updates download silently, Wi-Fi only.</string>
+    <string name="update_desc_never">Never check for model updates. You can still check manually with the button below.</string>
+    <string name="update_check_now">Check for updates now</string>
+    <string name="update_toast_done">Language models are up to date</string>
+    <string name="update_toast_failed">Model update failed. Check your connection</string>
+    <string name="update_dialog_title">Model updates</string>
+    <string name="update_dialog_body">Google releases improved language models from time to time. Update now to keep translations accurate? Nothing downloads without your approval.</string>
+    <string name="update_dialog_now">Update now</string>
+    <string name="update_dialog_later">Later</string>
+
+    <!-- Zapya offline sharing (v1.5.0) -->
+    <string name="share_section">Share without internet</string>
+    <string name="share_desc">Send this app together with its downloaded language models to a friend through Zapya or SHAREit. Your friend installs the app, then imports the models — no internet needed on their side.</string>
+    <string name="share_button">Share app + models</string>
+    <string name="share_preparing">Preparing…</string>
+    <string name="share_import">Import models</string>
+    <string name="share_import_desc">Received the models file? Pick it here to restore the models without internet.</string>
+    <string name="share_nothing">Could not prepare the share files</string>
+    <string name="share_no_models_note">No language models are downloaded yet — sharing the app only. Download models first to share them too.</string>
+    <string name="import_success">%1$d model files restored — offline translation is ready</string>
+    <string name="import_failed">Could not read that file. Is it the models ZIP?</string>
 
     <!-- Offline setup (v1.3) -->
     <string name="setup_card_title">Make it work offline</string>

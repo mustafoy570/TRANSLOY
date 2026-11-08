@@ -38,7 +38,10 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -46,6 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -81,6 +85,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dari.screentranslator.MainViewModel
 import com.dari.screentranslator.R
 import com.dari.screentranslator.engine.ModelManager
+import com.dari.screentranslator.engine.ModelShareManager
+import com.dari.screentranslator.model.ModelUpdatePolicy
 import com.dari.screentranslator.model.OcrScript
 import com.dari.screentranslator.model.ScrollBehavior
 import com.dari.screentranslator.model.TranslateScope
@@ -102,6 +108,13 @@ fun HomeScreen(
     val permissions by viewModel.permissions.collectAsStateWithLifecycle()
     val modelStates by viewModel.modelStates.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val updatePromptVisible by viewModel.updatePromptVisible.collectAsStateWithLifecycle()
+    val updateRunning by viewModel.updateRunning.collectAsStateWithLifecycle()
+    val updateResult by viewModel.updateResult.collectAsStateWithLifecycle()
+    val shareBusy by viewModel.shareBusy.collectAsStateWithLifecycle()
+    val shareEvent by viewModel.shareEvent.collectAsStateWithLifecycle()
+    val importResult by viewModel.importResult.collectAsStateWithLifecycle()
     // Offline translation needs BOTH the Persian (fa) target model and the
     // English (en) source model — the setup card and the auto-download
     // must therefore track both, not just the target.
@@ -120,6 +133,65 @@ fun HomeScreen(
     var captureRunning by remember { mutableStateOf(ScreenCaptureService.isRunning) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         captureRunning = ScreenCaptureService.isRunning
+        // Daily model-update check — respects the update policy setting and
+        // never downloads without the user's approval.
+        viewModel.maybeCheckForModelUpdates()
+    }
+
+    // Picks the received models ZIP (Zapya → Downloads) and restores it.
+    val importPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importModels(context, it) }
+    }
+
+    // Fires the Zapya share sheet once the share pack is built.
+    LaunchedEffect(shareEvent) {
+        shareEvent?.let { pack ->
+            when {
+                pack.apkFile == null && pack.modelsZip == null ->
+                    Toast.makeText(context, R.string.share_nothing, Toast.LENGTH_LONG).show()
+                !pack.hasModels ->
+                    Toast.makeText(context, R.string.share_no_models_note, Toast.LENGTH_LONG).show()
+            }
+            if (pack.apkFile != null || pack.modelsZip != null) {
+                runCatching {
+                    context.startActivity(ModelShareManager.shareIntent(context, pack))
+                }
+            }
+            viewModel.consumeShareEvent()
+        }
+    }
+
+    LaunchedEffect(importResult) {
+        importResult?.let { count ->
+            val message = if (count > 0) {
+                context.getString(R.string.import_success, count)
+            } else {
+                context.getString(R.string.import_failed)
+            }
+            Toast.makeText(
+                context,
+                message,
+                if (count > 0) Toast.LENGTH_SHORT else Toast.LENGTH_LONG
+            ).show()
+            viewModel.consumeImportResult()
+        }
+    }
+
+    LaunchedEffect(updateResult) {
+        updateResult?.let { result ->
+            Toast.makeText(
+                context,
+                if (result == MainViewModel.UpdateResult.DONE) {
+                    R.string.update_toast_done
+                } else {
+                    R.string.update_toast_failed
+                },
+                Toast.LENGTH_SHORT
+            ).show()
+            viewModel.consumeUpdateResult()
+        }
     }
 
     val notificationLauncher = rememberLauncherForActivityResult(
@@ -210,7 +282,18 @@ fun HomeScreen(
                 scope = settings.scope,
                 onScopeSelected = { viewModel.setScope(it) },
                 scrollBehavior = settings.scrollBehavior,
-                onScrollBehaviorSelected = { viewModel.setScrollBehavior(it) }
+                onScrollBehaviorSelected = { viewModel.setScrollBehavior(it) },
+                autoTranslateOnScroll = settings.autoTranslateOnScroll,
+                onAutoTranslateOnScroll = { viewModel.setAutoTranslateOnScroll(it) }
+            )
+
+            GeneralSettingsCard(
+                appLanguage = appLanguage,
+                onLanguageSelected = { viewModel.setAppLanguage(it) },
+                updatePolicy = settings.modelUpdatePolicy,
+                onUpdatePolicySelected = { viewModel.setModelUpdatePolicy(it) },
+                updateRunning = updateRunning,
+                onCheckNow = { viewModel.runModelUpdates() }
             )
 
             PermissionsCard(
@@ -229,6 +312,12 @@ fun HomeScreen(
                 onScriptSelected = { viewModel.setOcrScript(it) },
                 autoHideMs = settings.autoHideMs,
                 onAutoHideSelected = { viewModel.setAutoHideMs(it) }
+            )
+
+            ShareCard(
+                busy = shareBusy,
+                onShare = { viewModel.prepareSharePack(context) },
+                onImport = { importPicker.launch(arrayOf("*/*")) }
             )
 
             Row(
@@ -255,6 +344,29 @@ fun HomeScreen(
 
             PrivacyCard()
         }
+    }
+
+    // Model-update approval (policy “Ask me first”): nothing downloads
+    // until the user taps “Update now”.
+    if (updatePromptVisible) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissUpdatePrompt() },
+            title = { Text(stringResource(R.string.update_dialog_title)) },
+            text = { Text(stringResource(R.string.update_dialog_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.dismissUpdatePrompt()
+                    viewModel.runModelUpdates()
+                }) {
+                    Text(stringResource(R.string.update_dialog_now))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissUpdatePrompt() }) {
+                    Text(stringResource(R.string.update_dialog_later))
+                }
+            }
+        )
     }
 }
 
@@ -503,7 +615,9 @@ private fun TranslationModeCard(
     scope: TranslateScope,
     onScopeSelected: (TranslateScope) -> Unit,
     scrollBehavior: ScrollBehavior,
-    onScrollBehaviorSelected: (ScrollBehavior) -> Unit
+    onScrollBehaviorSelected: (ScrollBehavior) -> Unit,
+    autoTranslateOnScroll: Boolean,
+    onAutoTranslateOnScroll: (Boolean) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -596,6 +710,31 @@ private fun TranslationModeCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+
+            // v1.5: auto-refresh the open panel when the page scrolls.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.setting_auto_scroll_title),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.setting_auto_scroll_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = autoTranslateOnScroll,
+                    onCheckedChange = onAutoTranslateOnScroll
+                )
+            }
         }
     }
 }
@@ -869,7 +1008,8 @@ private fun HowToCard() {
                 R.string.how_to_3,
                 R.string.how_to_4,
                 R.string.how_to_5,
-                R.string.how_to_6
+                R.string.how_to_6,
+                R.string.how_to_7
             )
             for ((index, step) in steps.withIndex()) {
                 Row(
@@ -968,6 +1108,193 @@ private fun PrivacyCard() {
                     )
                 }
             }
+        }
+    }
+}
+
+// --------------------------------------------------------- general settings
+
+/**
+ * v1.5.0 — the SIMPLE settings card the users asked for: two choices and a
+ * button, in plain language.
+ *  - App language: English ⇄ دری, applied instantly (whole UI, toasts,
+ *    overlay menus included — everything localized).
+ *  - Model updates: who approves Google's language-model updates
+ *    (Ask me first / Auto on Wi-Fi / Never) + a manual "Check now" button.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GeneralSettingsCard(
+    appLanguage: String,
+    onLanguageSelected: (String) -> Unit,
+    updatePolicy: ModelUpdatePolicy,
+    onUpdatePolicySelected: (ModelUpdatePolicy) -> Unit,
+    updateRunning: Boolean,
+    onCheckNow: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_general_section),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                text = stringResource(R.string.settings_language),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = appLanguage != "fa",
+                    onClick = { onLanguageSelected("en") },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    icon = { SegmentedButtonDefaults.Icon(appLanguage != "fa") }
+                ) {
+                    Text(stringResource(R.string.lang_english))
+                }
+                SegmentedButton(
+                    selected = appLanguage == "fa",
+                    onClick = { onLanguageSelected("fa") },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    icon = { SegmentedButtonDefaults.Icon(appLanguage == "fa") }
+                ) {
+                    Text(stringResource(R.string.lang_dari))
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+
+            Text(
+                text = stringResource(R.string.settings_update_policy),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val policies = listOf(
+                    ModelUpdatePolicy.ASK_FIRST to R.string.update_policy_ask,
+                    ModelUpdatePolicy.AUTO_WIFI to R.string.update_policy_auto,
+                    ModelUpdatePolicy.NEVER to R.string.update_policy_never
+                )
+                for ((policy, label) in policies) {
+                    FilterChip(
+                        selected = updatePolicy == policy,
+                        onClick = { onUpdatePolicySelected(policy) },
+                        label = { Text(stringResource(label)) }
+                    )
+                }
+            }
+            Text(
+                text = stringResource(
+                    when (updatePolicy) {
+                        ModelUpdatePolicy.ASK_FIRST -> R.string.update_desc_ask
+                        ModelUpdatePolicy.AUTO_WIFI -> R.string.update_desc_auto
+                        ModelUpdatePolicy.NEVER -> R.string.update_desc_never
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(onClick = onCheckNow, enabled = !updateRunning) {
+                    Text(stringResource(R.string.update_check_now))
+                }
+                if (updateRunning) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- zapya share
+
+/**
+ * ZAPYA OFFLINE SHARING (v1.5.0): send the app AND its downloaded language
+ * models to a friend phone-to-phone. The friend installs the APK, taps
+ * "Import models" and picks the received ZIP — full offline translation
+ * without ever touching the internet.
+ */
+@Composable
+private fun ShareCard(
+    busy: Boolean,
+    onShare: () -> Unit,
+    onImport: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.share_section),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+            Text(
+                text = stringResource(R.string.share_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = onShare, enabled = !busy) {
+                    if (busy) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.share_preparing))
+                    } else {
+                        Text(stringResource(R.string.share_button))
+                    }
+                }
+                TextButton(onClick = onImport, enabled = !busy) {
+                    Text(stringResource(R.string.share_import))
+                }
+            }
+            Text(
+                text = stringResource(R.string.share_import_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

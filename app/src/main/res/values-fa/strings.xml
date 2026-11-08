@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">مترجم صفحه دری</string>
+    <string name="app_name">TRANSLOY</string>
 
     <string name="toggle_section_title">ترجمه صفحه</string>
     <string name="toggle_on">ترجمه روشن است</string>
@@ -33,16 +33,16 @@
 
     <!-- Translation mode -->
     <string name="mode_section">حالت ترجمه</string>
-    <string name="scope_title">هنگام لمس، چه چیزی ترجمه شود</string>
+    <string name="scope_title">چه چیزی ترجمه شود</string>
     <string name="scope_whole">تمام صفحه</string>
     <string name="scope_near">نزدیک دکمه</string>
     <string name="scope_desc_whole">همه متن‌های صفحه یک‌جا ترجمه می‌شوند.</string>
-    <string name="scope_desc_near">فقط متن‌های نزدیک دکمه ترجمه می‌شوند. دکمه را روی متن بکشید — به‌محض رها کردن، ترجمه انجام می‌شود.</string>
+    <string name="scope_desc_near">فقط متن‌های نزدیک دکمه ترجمه می‌شوند. دکمه را کنار جمله بگذارید و نگه دارید (لمس طولانی) — کشیدن دکمه فقط جای آن را عوض می‌کند.</string>
     <string name="scroll_title">وقتی صفحه اسکرول می‌شود</string>
     <string name="scroll_hide">پنهان شود</string>
     <string name="scroll_keep">بماند</string>
     <string name="scroll_desc_hide">ترجمه‌ها به‌محض اسکرول صفحه ناپدید می‌شوند (برای فیدهایی مثل تلگرام مناسب است).</string>
-    <string name="scroll_desc_keep">ترجمه‌ها تا لمس دوباره دکمه باقی می‌مانند.</string>
+    <string name="scroll_desc_keep">ترجمه‌ها تا بستن پنل باقی می‌مانند.</string>
     <string name="perm_capture">ضبط صفحه برای تصویر و بازی</string>
     <string name="capture_grant">فعال کردن</string>
     <string name="models_update_note">نصب نسخه جدید برنامه، زبان‌ها، مدل‌ها و تنظیمات دانلود‌شده را حفظ می‌کند. فقط حذف نصب برنامه آن‌ها را پاک می‌کند.</string>
@@ -75,7 +75,7 @@
     <string name="guide_title">راهنمای راه‌اندازی</string>
     <string name="guide_intro">این مراحل را یک بار انجام دهید. روی هر کارت بزنید تا صفحه تنظیمات آن باز شود.</string>
     <string name="guide_step_overlay_title">اجازه نمایش روی دیگر برنامه‌ها</string>
-    <string name="guide_step_overlay_desc">برای نمایش دکمه شناور و جعبه‌های ترجمه لازم است.</string>
+    <string name="guide_step_overlay_desc">برای نمایش دکمه شناور، منوی گرد و پنل ترجمه لازم است.</string>
     <string name="guide_step_notifications_title">اجازه اعلان‌ها</string>
     <string name="guide_step_notifications_desc">در اندروید ۱۳ و جدیدتر برای اجرای سرویس‌های ترجمه در پس‌زمینه لازم است.</string>
     <string name="guide_step_accessibility_title">فعال‌سازی سرویس دسترس‌پذیری</string>
@@ -87,30 +87,32 @@
 
     <string name="how_to_title">روش استفاده</string>
     <string name="how_to_1">کلید بزرگ را در صفحه اصلی روشن کنید.</string>
-    <string name="how_to_2">دکمه کوچک شناور روی همه برنامه‌ها ظاهر می‌شود؛ آن را هر جا بخواهید بکشید.</string>
-    <string name="how_to_3">یک بار روی آن بزنید تا ترجمه شود — تمام صفحه، یا فقط متن نزدیک دکمه (انتخاب شما در «حالت ترجمه»). در حالت «نزدیک دکمه» کافی است دکمه را روی متن بکشید و رها کنید: ترجمه خودکار انجام می‌شود.</string>
-    <string name="how_to_4">دوباره بزنید تا ترجمه‌ها پنهان شوند. اگر آن را روشن کرده باشید، با اسکرول صفحه هم خودکار پنهان می‌شوند.</string>
-    <string name="how_to_5">برای ترجمه اجباری تصویر، دکمه را نگه دارید.</string>
-    <string name="how_to_6">مدل‌های زبان را از قبل وقتی اینترنت دارید دانلود کنید.</string>
+    <string name="how_to_2">دکمه کوچک شناور روی همه برنامه‌ها ظاهر می‌شود؛ آن را هر جا بخواهید بکشید. پس از ۳ ثانیه بی‌کاری، خودش به کنار صفحه می‌چسبد و کم‌رنگ می‌شود تا مزاحم نباشد — با یک لمس بیدار می‌شود.</string>
+    <string name="how_to_3">یک بار روی آن بزنید تا منوی گرد باز شود: ترجمهٔ صفحه، تصویر (OCR)، خودکار هنگام اسکرول، بستن، و خاموش کردن. منو بعد از انتخاب خودش بسته می‌شود.</string>
+    <string name="how_to_4">دکمه را کنار متن نگه دارید (لمس طولانی) تا فقط همان بخش ترجمه شود. لمس طولانی منو و پنل ترجمه را هم می‌بندد — یک دکمه برای همه کارها.</string>
+    <string name="how_to_5">ترجمه‌ها در پنلی پایین صفحه باز می‌شوند: متن اصلی بالا، ترجمهٔ دری پایین آن؛ کاملاً قابل مرور و بدون بریده شدن. با لمس هر ترجمه، کپی می‌شود.</string>
+    <string name="how_to_6">با روشن بودن «خودکار هنگام اسکرول»، پنل پس از اسکرول صفحه خودش دوباره ترجمه می‌کند — نیازی به لمس دوباره نیست.</string>
+    <string name="how_to_7">مدل‌های زبان را از قبل وقتی اینترنت دارید دانلود کنید.</string>
+    <string name="how_to_8">برنامه را همراه مدل‌هایش از طریق زپیا برای دوستان بفرستید (تنظیمات ← هم‌رسانی بدون اینترنت). او برنامه را نصب می‌کند و فایل مدل‌ها را درون‌ریزی می‌کند: ترجمهٔ کامل آفلاین، بدون حتی یک کیلوبایت اینترنت.</string>
 
     <string name="back">بازگشت</string>
 
     <string name="channel_overlay">لایه ترجمه</string>
     <string name="channel_capture">ضبط صفحه</string>
     <string name="notif_overlay_title">ترجمه روشن است</string>
-    <string name="notif_overlay_text">برای ترجمه صفحه روی دکمه شناور بزنید.</string>
+    <string name="notif_overlay_text">روی دکمه شناور بزنید تا منوی ترجمه باز شود.</string>
     <string name="notif_capture_title">ضبط صفحه فعال است</string>
     <string name="notif_capture_text">فقط هنگام ترجمه تصاویر و بازی‌ها استفاده می‌شود.</string>
     <string name="notif_action_turn_off">خاموش کردن</string>
     <string name="notif_action_stop">توقف</string>
-    <string name="btn_translate_desc">ترجمه صفحه</string>
+    <string name="btn_translate_desc">باز کردن منوی ترجمه</string>
 
-    <string name="accessibility_service_label">مترجم صفحه دری</string>
+    <string name="accessibility_service_label">TRANSLOY</string>
     <string name="accessibility_service_summary">متن روی صفحه را می‌خواند تا به فارسی/دری ترجمه شود</string>
     <string name="accessibility_service_description">این سرویس فقط وقتی شما روی دکمه شناور ترجمه بزنید، متن صفحه فعلی را می‌خواند و به مترجم داخل خود دستگاه می‌دهد. رمزها و کادرهای تایپ هرگز خوانده نمی‌شوند. هیچ اطلاعاتی از گوشی شما خارج نمی‌شود.</string>
 
     <string name="toast_no_text">متن قابل خواندنی روی این صفحه پیدا نشد</string>
-    <string name="toast_no_text_near">متن نزدیک دکمه پیدا نشد. دکمه را دقیقاً کنار متن ببرید و دوباره لمس کنید</string>
+    <string name="toast_no_text_near">متن نزدیک دکمه پیدا نشد. دکمه را کنار متن بگذارید و دوباره نگه دارید</string>
     <string name="toast_nothing_to_translate">چیزی برای ترجمه نیست (فارسی است یا پشتیبانی نمی‌شود)</string>
     <string name="toast_capture_failed">ضبط صفحه ممکن نشد. دوباره تلاش کنید</string>
     <string name="toast_consent_needed">برای ترجمه تصاویر، اجازه ضبط صفحه بدهید</string>
@@ -119,6 +121,54 @@
     <string name="toast_model_missing">مدل %1$s موجود نیست. برنامه را باز کنید و آن را دانلود کنید</string>
     <string name="toast_translation_error">خطای ترجمه: %1$s</string>
     <string name="toast_overlay_permission">اول اجازه «نمایش روی دیگر برنامه‌ها» را بدهید</string>
+
+    <!-- منوی گرد و پنل ترجمه (نسخه ۱.۵) -->
+    <string name="menu_translate">ترجمهٔ صفحه</string>
+    <string name="menu_ocr">تصویر (OCR)</string>
+    <string name="menu_auto_on">خودکار: روشن</string>
+    <string name="menu_auto_off">خودکار: خاموش</string>
+    <string name="menu_close">بستن</string>
+    <string name="menu_power_off">خاموش کردن</string>
+    <string name="panel_title">ترجمه</string>
+    <string name="panel_close_desc">بستن ترجمه‌ها</string>
+    <string name="panel_copy_toast">کپی شد</string>
+    <string name="toast_auto_on">ترجمهٔ خودکار هنگام اسکرول: روشن</string>
+    <string name="toast_auto_off">ترجمهٔ خودکار هنگام اسکرول: خاموش</string>
+    <string name="setting_auto_scroll_title">ترجمهٔ خودکار هنگام اسکرول</string>
+    <string name="setting_auto_scroll_desc">وقتی پنل باز است، پس از اسکرول صفحه خودش دوباره ترجمه می‌کند — نیازی به لمس دوباره نیست.</string>
+
+    <!-- تنظیمات عمومی: زبان و به‌روزرسانی مدل‌ها (نسخه ۱٫۵) -->
+    <string name="settings_general_section">تنظیمات برنامه</string>
+    <string name="settings_language">زبان برنامه</string>
+    <string name="lang_english">English</string>
+    <string name="lang_dari">دری</string>
+    <string name="settings_update_policy">به‌روزرسانی مدل‌های زبان</string>
+    <string name="update_policy_ask">اول بپرس</string>
+    <string name="update_policy_auto">خودکار (وای‌فای)</string>
+    <string name="update_policy_never">هرگز</string>
+    <string name="update_desc_ask">گوگل مدل‌های زبان را با گذشت زمان بهبود می‌دهد. برنامه پیش از دانلود هر چیزی از شما اجازه می‌گیرد (پیشنهادی).</string>
+    <string name="update_desc_auto">به‌روزرسانی مدل‌ها بی‌صدا و فقط با وای‌فای دانلود می‌شود.</string>
+    <string name="update_desc_never">هرگز به‌روزرسانی بررسی نمی‌شود؛ همچنان می‌توانید با دکمهٔ زیر دستی بررسی کنید.</string>
+    <string name="update_check_now">همین حالا بررسی کن</string>
+    <string name="update_toast_done">مدل‌های زبان به‌روز هستند</string>
+    <string name="update_toast_failed">به‌روزرسانی ناموفق بود. اتصال اینترنت را بررسی کنید</string>
+    <string name="update_dialog_title">به‌روزرسانی مدل‌ها</string>
+    <string name="update_dialog_body">گوگل از زمانی به زمان دیگر مدل‌های زبان بهبودیافته منتشر می‌کند. همین حالا به‌روزرسانی می‌کنید تا ترجمه‌ها دقیق بمانند؟ هیچ چیزی بدون اجازهٔ شما دانلود نمی‌شود.</string>
+    <string name="update_dialog_now">به‌روزرسانی کن</string>
+    <string name="update_dialog_later">بعداً</string>
+
+    <!-- هم‌رسانی آفلاین با زپیا (نسخه ۱٫۵) -->
+    <string name="share_section">هم‌رسانی بدون اینترنت</string>
+    <string name="share_desc">برنامه را همراه با مدل‌های زبان دانلودشده، از طریق زپیا یا شیرایت برای دوستتان بفرستید. او برنامه را نصب می‌کند و سپس مدل‌ها را درون‌ریزی می‌کند — طرف او به اینترنت نیاز نیست.</string>
+    <string name="share_button">هم‌رسانی برنامه + مدل‌ها</string>
+    <string name="share_preparing">در حال آماده‌سازی…</string>
+    <string name="share_import">درون‌ریزی مدل‌ها</string>
+    <string name="share_import_desc">فایل مدل‌ها را دریافت کرده‌اید؟ همین‌جا انتخابش کنید تا بدون اینترنت بازیابی شود.</string>
+    <string name="share_nothing">آماده‌سازی فایل‌های هم‌رسانی ممکن نشد</string>
+    <string name="share_no_models_note">هنوز مدل زبانی دانلود نشده — فقط برنامه هم‌رسانی می‌شود. برای هم‌رسانی مدل‌ها هم، اول آن‌ها را دانلود کنید.</string>
+    <string name="import_success">%1$d فایل مدل بازیابی شد — ترجمهٔ آفلاین آماده است</string>
+    <string name="import_failed">آن فایل خوانده نشد. آیا فایل زیپ مدل‌ها است؟</string>
+
 
     <!-- آماده‌سازی کار بدون اینترنت (نسخه ۱.۳) -->
     <string name="setup_card_title">کار کردن بدون اینترنت را فعال کنید</string>
